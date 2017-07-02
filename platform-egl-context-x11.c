@@ -5,8 +5,6 @@
  *      Author: ionut
  */
 
-
-#include "platform-egl-context-x11.h"
 #include "platform-egl-context-priv.h"
 #include "platform-egl-log.h"
 
@@ -237,6 +235,7 @@ void platform_egl_context_swap_buffers_x11( PlatformEGLContextX11 *eglctx )
 	eglSwapBuffers(eglctx->m_parent_ctx.m_egl_dpy, eglctx->m_parent_ctx.m_egl_surf);
 
 }
+
 static void platform_egl_context_close_window_x11(PlatformEGLContextX11 *eglctx)
 {
 	if (!eglctx)
@@ -248,7 +247,7 @@ static void platform_egl_context_close_window_x11(PlatformEGLContextX11 *eglctx)
 
 }
 
-static void platform_egl_context_show_window(PlatformEGLContextX11 *eglctx)
+static void platform_egl_context_show_window_x11(PlatformEGLContextX11 *eglctx)
 {
 	XMapWindow(eglctx->m_native_x_display, eglctx->m_native_x_window );
 	if (!eglMakeCurrent(eglctx->m_parent_ctx.m_egl_dpy,
@@ -288,7 +287,7 @@ int  platform_egl_context_init( PlatformEGLContext *ctx )
 	if( rc )
 		return rc;
 
-    platform_egl_context_show_window(ctx_x11);
+    platform_egl_context_show_window_x11(ctx_x11);
 	ctx_x11->m_parent_ctx.m_initialized = 1;
 	return rc;
 }

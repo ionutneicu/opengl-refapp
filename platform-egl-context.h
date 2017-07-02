@@ -8,16 +8,7 @@
 #ifndef PLATFORM_EGL_H_
 #define PLATFORM_EGL_H_
 
-// Todo: move to disppmanx egl context
-#ifdef HAVE_DISPMANX
-#include "bcm_host.h"
-#endif
 
-#ifdef HAVE_DISPMANX
-	   DISPMANX_DISPLAY_HANDLE_T m_native_dispmanx_display;
-	   DISPMANX_ELEMENT_HANDLE_T m_native_dispmanx_element;
-	   EGL_DISPMANX_WINDOW_T 	 m_native_dispmanx_window;
-#endif
 
 
 

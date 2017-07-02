@@ -17,8 +17,8 @@ typedef struct tagPlatformEGLContext
 	   EGLSurface 		 m_egl_surf;
 	   EGLContext 		 m_egl_ctx;
 	   EGLDisplay 		 m_egl_dpy;
-	   unsigned short	 m_width;
-	   unsigned short    m_height;
+	   uint32_t			 m_width;
+	   uint32_t		     m_height;
 	   unsigned short	 m_initialized;
 } PlatformEGLContext;
 

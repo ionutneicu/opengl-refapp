@@ -14,10 +14,10 @@
 
 
 
-inline void platform_egl_varlog( 			 const log_level_t level,
-                         const char *file,
-                         const unsigned int line,
-                         const char* format, ... )
+inline void platform_egl_varlog( 	const log_level_t level,
+                         	 	 	const char *file,
+                         	 	 	const unsigned int line,
+                         	 	 	const char* format, ... )
 {
     char dest[1024 * 16];
     va_list argptr;
