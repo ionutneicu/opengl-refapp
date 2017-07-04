@@ -11,9 +11,12 @@
 
 
 #include <GLES2/gl2.h>
+#include <time.h>
 
 #define GL_CHECK_ERROR( __x__ ) __x__ ; if ((error=glGetError()) != GL_NO_ERROR) { LERROR("-----> %s %s: ERROR %d at line %d\n", #__x__, __FUNCTION__ , error,  __LINE__ ); }
 int error;
+
+#define MILIS( __x__ )  ( ( __x__.tv_sec*1000 )  + ( __x__.tv_nsec / 1000000 ) )
 
 static const char *vertex_source =
 		  "attribute vec4 a_position;   \n"
@@ -97,7 +100,7 @@ GLuint loadBMP_custom(const char * imagepath)
 }
 
 
-void opengl_draw_texture( GLuint texture,  GLuint program )
+void opengl_draw_texture( GLuint texture,  GLuint program, const float scale_factor )
 {
 
 			static const GLfloat texices[] = { 0, 1,
@@ -106,7 +109,7 @@ void opengl_draw_texture( GLuint texture,  GLuint program )
 			                            1, 1 };
 
 
-			static const GLfloat vertices[] = { -1, -1, 0,  // bottom left corner
+			GLfloat vertices[] = { -1, -1, 0,  // bottom left corner
 			                             -1,  1, 0,  // top left corner
 			                              1,  1, 0,  // top right corner
 			                              1, -1, 0}; // bottom right corner
@@ -115,6 +118,10 @@ void opengl_draw_texture( GLuint texture,  GLuint program )
 			                            0, 3, 2 };
 
 
+			int i;
+
+			for( i = 0; i < sizeof( vertices ) /  sizeof( GLfloat ); ++ i )
+				vertices[i] = vertices[i]*scale_factor;
 			glUseProgram ( program  );
 			// Load the vertex position
 			GLint positionLoc = glGetAttribLocation ( program , "a_position" );
@@ -138,15 +145,21 @@ void opengl_draw_texture( GLuint texture,  GLuint program )
 
 }
 
+static struct timespec past = { 0 };
+
 void platform_opengl_draw(PlatformEGLContext* eglctx)
 {
 	static int need_init = 1;
 	static GLuint vertex, fragment, program;
 	static GLuint texture;
+	struct timespec current;
+	int i;
+	static int averaging_frame = 0;
 
 	if( ! need_init )
 		goto partial_draw;
 
+	clock_gettime( CLOCK_REALTIME, &past );
 
 	GL_CHECK_ERROR( vertex = glCreateShader(GL_VERTEX_SHADER) )
 	GL_CHECK_ERROR( glShaderSource(vertex, 1, &vertex_source, NULL) )
@@ -185,20 +198,28 @@ void platform_opengl_draw(PlatformEGLContext* eglctx)
 
     need_init = 0;
 
-
-
 partial_draw:
 	LINFO("=== calling glClear()\n");
 
 	GL_CHECK_ERROR( glClear(GL_COLOR_BUFFER_BIT) )
 	GL_CHECK_ERROR( glFlush() )
 
-	opengl_draw_texture( texture, program );
-	LINFO("=== calling eglSwapBuffers()\n");
+	opengl_draw_texture( texture, program, 0.1f );
 
+	LINFO("=== calling eglSwapBuffers()\n");
+	
 	platform_egl_context_swap_buffers(eglctx);
-	GL_CHECK_ERROR( glFlush() )
+	GL_CHECK_ERROR( glFinish() )
 	LINFO("=== done\n");
+	usleep(10000);
+	if( ++averaging_frame == 60 )
+	{
+		clock_gettime(CLOCK_REALTIME, &current);
+		long milis = MILIS( current )- MILIS(past);
+		LINFO("FPS -----> %d",  milis / averaging_frame  );
+		past = current;
+		averaging_frame = 0;
+	}
 }
 
 
