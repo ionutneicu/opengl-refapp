@@ -38,12 +38,13 @@ static const char *fragment_source =
 		  "}												   \n";
 
 
+static char* data;
+unsigned int width, height;
 
-GLuint loadBMP_custom(const char * imagepath)
+int loadBMP_custom(const char * imagepath)
 {
 	unsigned char header[54];
 	unsigned int dataPos;
-	unsigned int width, height;
 	unsigned int imageSize;
 	int i;
 
@@ -51,19 +52,19 @@ GLuint loadBMP_custom(const char * imagepath)
 	if (!file)
 	{
 		printf("Image could not be opened 1\n\r");
-		return 0;
+		return -1;
 	}
 
 	if( fread(header, 1, 54, file ) != 54 )
 	{
 		printf("Not a correct BMP file\n\r");
-		return 0;
+		return -2;
 	}
 
 	if( ( header[0] != 'B' ) || ( header[1] != 'M' ) )
 	{
 		printf("Not a correct BMP file\n\r");
-		return 0;
+		return -3;
 	}
 
 	dataPos   = *(int*)&(header[0x0A]);
@@ -71,32 +72,50 @@ GLuint loadBMP_custom(const char * imagepath)
 	height   = *(int*)&(header[0x16]);
 	imageSize = *(int*)&(header[0x22]);
 
+	data = (char*)malloc(  width*height*4 );
+	memset( data, 0,  width*height*3 );
+
 	printf("found bitmap in file, width=%d, height=%d, image_size=%d\n\r", width, height, imageSize );
 	if ( imageSize == 0 ) imageSize = width*height*3;
+	if( imageSize != width*height*3 )
+			return -5;
+
 	if ( dataPos == 0 ) dataPos = 54;
 
-	unsigned char data [imageSize];
+	char tmpdata[ width*height*4 ];
 
-	//memset( data, 0xff, imageSize );
-	fread(data,1,imageSize,file);
+
+	fread( tmpdata,1,imageSize,file );
+
 	for( i = 0; i < width*height; ++ i )
 	{
-		unsigned char tmp = data[i*3 + 2];
-		data[i*3+2] = data[i*3];
-		data[i*3] = tmp;
+		data[4*i] = tmpdata[3*i + 1];
+		data[4*i+1] = tmpdata[3*i];
+		data[4*i+2] = tmpdata[3*i+2];
+		data[4*i+3] = 0xffu;
 	}
 
 	fclose(file);
+	return 0;
 
+}
+
+static GLuint opengl_load_texture_in_gpu( void* texture_data, unsigned int tex_width, unsigned int tex_height )
+{
 	GLuint textureID = 1;
 	GL_CHECK_ERROR( glGenTextures(1, &textureID) )
 	GL_CHECK_ERROR( glBindTexture(GL_TEXTURE_2D, textureID) )
-	GL_CHECK_ERROR( glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data) )
+	GL_CHECK_ERROR( glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex_width, tex_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data) )
 	GL_CHECK_ERROR( glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (GLfloat)GL_NEAREST) );
 	GL_CHECK_ERROR( glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (GLfloat)GL_NEAREST) );
 	GL_CHECK_ERROR( glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE) );
 	GL_CHECK_ERROR( glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE) );
 	return textureID;
+}
+
+static void opengl_unload_texture_from_gpu( GLuint texture )
+{
+      GL_CHECK_ERROR( glDeleteTextures(1, &texture ))
 }
 
 
@@ -122,7 +141,7 @@ void opengl_draw_texture( GLuint texture,  GLuint program, const float scale_fac
 
 			for( i = 0; i < sizeof( vertices ) /  sizeof( GLfloat ); ++ i )
 				vertices[i] = vertices[i]*scale_factor;
-			glUseProgram ( program  );
+		//	glUseProgram ( program  );
 			// Load the vertex position
 			GLint positionLoc = glGetAttribLocation ( program , "a_position" );
 			glVertexAttribPointer ( positionLoc, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), vertices );
@@ -151,7 +170,7 @@ void platform_opengl_draw(PlatformEGLContext* eglctx)
 {
 	static int need_init = 1;
 	static GLuint vertex, fragment, program;
-	static GLuint texture;
+	static GLuint texture = 0;
 	struct timespec current;
 	int i;
 	static int averaging_frame = 0;
@@ -194,7 +213,7 @@ void platform_opengl_draw(PlatformEGLContext* eglctx)
 	GL_CHECK_ERROR( glFlush() )
 
 
-	texture = loadBMP_custom("./texture.bmp");
+	loadBMP_custom("./texture.bmp");
 
     need_init = 0;
 
@@ -204,19 +223,32 @@ partial_draw:
 	GL_CHECK_ERROR( glClear(GL_COLOR_BUFFER_BIT) )
 	GL_CHECK_ERROR( glFlush() )
 
-	opengl_draw_texture( texture, program, 0.1f );
+	if( ! texture )
+	{
+		texture = opengl_load_texture_in_gpu( data, width, height );
+		LDEBUG("texture = %u", texture );
+	}
+	if( texture )
+	{
+		opengl_draw_texture( texture, program, i*0.1f );
+		//opengl_unload_texture_from_gpu(texture);
+		//texture = 0;
+	}
+	else
+	{
+		LWARN( "no texture");
+	}
 
 	LINFO("=== calling eglSwapBuffers()\n");
 	
 	platform_egl_context_swap_buffers(eglctx);
 	GL_CHECK_ERROR( glFinish() )
 	LINFO("=== done\n");
-	usleep(10000);
 	if( ++averaging_frame == 60 )
 	{
 		clock_gettime(CLOCK_REALTIME, &current);
 		long milis = MILIS( current )- MILIS(past);
-		LINFO("FPS -----> %d",  milis / averaging_frame  );
+		LINFO("FPS -----> %d",  1000*averaging_frame / milis  );
 		past = current;
 		averaging_frame = 0;
 	}
