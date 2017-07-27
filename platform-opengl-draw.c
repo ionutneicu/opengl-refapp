@@ -89,10 +89,10 @@ int loadBMP_custom(const char * imagepath)
 
 	for( i = 0; i < width*height; ++ i )
 	{
-		data[4*i] = tmpdata[3*i + 1];
-		data[4*i+1] = tmpdata[3*i];
-		data[4*i+2] = tmpdata[3*i+2];
-		data[4*i+3] = 0xffu;
+		data[ 4*i ]   = tmpdata[ 3*i + 1 ];
+		data[ 4*i+1 ] = tmpdata[ 3*i ];
+		data[ 4*i+2 ] = tmpdata[ 3*i+2 ];
+		data[ 4*i+3 ] = 0xffu;
 	}
 
 	fclose(file);
@@ -141,7 +141,7 @@ void opengl_draw_texture( GLuint texture,  GLuint program, const float scale_fac
 
 			for( i = 0; i < sizeof( vertices ) /  sizeof( GLfloat ); ++ i )
 				vertices[i] = vertices[i]*scale_factor;
-		//	glUseProgram ( program  );
+			glUseProgram ( program  );
 			// Load the vertex position
 			GLint positionLoc = glGetAttribLocation ( program , "a_position" );
 			glVertexAttribPointer ( positionLoc, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), vertices );
@@ -172,7 +172,8 @@ void platform_opengl_draw(PlatformEGLContext* eglctx)
 	static GLuint vertex, fragment, program;
 	static GLuint texture = 0;
 	struct timespec current;
-	int i;
+	static int i = 80;
+	static int direction = 1;
 	static int averaging_frame = 0;
 
 	if( ! need_init )
@@ -209,13 +210,13 @@ void platform_opengl_draw(PlatformEGLContext* eglctx)
 
 	LINFO("=== calling glClearColor()\n");
 
-	GL_CHECK_ERROR( glClearColor(0.0f, 0.0f, 0.0f, 1.0f) )
+	GL_CHECK_ERROR( glClearColor(0.0f, 0.0f, 0.0f, 0.0f) )
 	GL_CHECK_ERROR( glFlush() )
 
 
 	loadBMP_custom("./texture.bmp");
 
-    need_init = 0;
+        need_init = 0;
 
 partial_draw:
 	LINFO("=== calling glClear()\n");
@@ -230,7 +231,15 @@ partial_draw:
 	}
 	if( texture )
 	{
-		opengl_draw_texture( texture, program, i*0.1f );
+		
+		i = i + direction;
+		if( i > 120 )
+			direction = -1;
+		else
+			if( i < 80 )
+				direction = 1;
+
+		opengl_draw_texture( texture, program, i*0.01f );
 		//opengl_unload_texture_from_gpu(texture);
 		//texture = 0;
 	}
