@@ -26,19 +26,28 @@
 #include <unistd.h>
 
 #include "platform-egl-context.h"
+#include "platform-opengl-draw.h"
 
 int main(int argc, char *argv[])
 {
 	int rc;
+
 	PlatformEGLContext* eglctx = platform_egl_context_create();
+	PlatformOpenGLContext *oglctx;
 	if( ( rc=platform_egl_context_init( eglctx ) ) )
 	{
 		fprintf(stderr, "platform_egl_context_init failed with code %d\n", rc );
 		return 1;
 	}
-	platform_egl_context_mainloop( eglctx );
+	else
+	{
+		fprintf(stdout, "platform_egl_context_init succeeded\n" );
+	}
+
+	oglctx = platform_opengl_context_create( eglctx );
+	platform_opengl_init( oglctx);
+	platform_opengl_mainloop( oglctx );
 	platform_egl_context_deinit( eglctx );
 	platform_egl_context_destroy( eglctx );
-
 	return 0;
 }

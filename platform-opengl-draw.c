@@ -10,10 +10,13 @@
 #include "platform-egl-log.h"
 
 
-#include <GLES2/gl2.h>
-#include <time.h>
 
-#define GL_CHECK_ERROR( __x__ ) __x__ ; if ((error=glGetError()) != GL_NO_ERROR) { LERROR("-----> %s %s: ERROR %d at line %d\n", #__x__, __FUNCTION__ , error,  __LINE__ ); }
+#include <time.h>
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define GL_CHECK_ERROR( __x__ ) __x__ ; if ((error=glGetError()) != GL_NO_ERROR) { LERROR("-----> %s %s: ERROR %d at line %d", #__x__, __FUNCTION__ , error,  __LINE__ ); }
 int error;
 
 #define MILIS( __x__ )  ( ( __x__.tv_sec*1000 )  + ( __x__.tv_nsec / 1000000 ) )
@@ -34,8 +37,8 @@ static const char *fragment_source =
 		  "uniform sampler2D tex;                              \n"
 		  "void main()                                         \n"
 		  "{                                                   \n"
-		  "  gl_FragColor = texture2D( tex, v_texCoord );	   \n"
-		  "}												   \n";
+		  "  gl_FragColor = texture2D( tex, v_texCoord );      \n"
+		  "}						       \n";
 
 
 static char* data;
@@ -67,10 +70,10 @@ int loadBMP_custom(const char * imagepath)
 		return -3;
 	}
 
-	dataPos   = *(int*)&(header[0x0A]);
-	width   = *(int*)&(header[0x12]);
-	height   = *(int*)&(header[0x16]);
-	imageSize = *(int*)&(header[0x22]);
+	dataPos   =  *(int*)&(header[0x0A]);
+	width     =  *(int*)&(header[0x12]);
+	height    =  *(int*)&(header[0x16]);
+	imageSize =  *(int*)&(header[0x22]);
 
 	data = (char*)malloc(  width*height*4 );
 	memset( data, 0,  width*height*3 );
@@ -92,7 +95,7 @@ int loadBMP_custom(const char * imagepath)
 		data[ 4*i ]   = tmpdata[ 3*i + 1 ];
 		data[ 4*i+1 ] = tmpdata[ 3*i ];
 		data[ 4*i+2 ] = tmpdata[ 3*i+2 ];
-		data[ 4*i+3 ] = 0xffu;
+		data[ 4*i+3 ] = 0xFF;
 	}
 
 	fclose(file);
@@ -134,13 +137,14 @@ void opengl_draw_texture( GLuint texture,  GLuint program, const float scale_fac
 			                              1, -1, 0}; // bottom right corner
 
 			static const GLubyte indices[] = { 0, 2, 1,     // first triangle (bottom left - top left - top right)
-			                            0, 3, 2 };
+											   0, 3, 2 };
 
 
 			int i;
 
 			for( i = 0; i < sizeof( vertices ) /  sizeof( GLfloat ); ++ i )
 				vertices[i] = vertices[i]*scale_factor;
+
 			glUseProgram ( program  );
 			// Load the vertex position
 			GLint positionLoc = glGetAttribLocation ( program , "a_position" );
@@ -148,7 +152,6 @@ void opengl_draw_texture( GLuint texture,  GLuint program, const float scale_fac
 			// Load the texture coordinate
 			GLint texCoordLoc = glGetAttribLocation ( program , "a_texCoord");
 			glVertexAttribPointer ( texCoordLoc, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), texices);
-
 			glEnableVertexAttribArray ( positionLoc );
 			glEnableVertexAttribArray ( texCoordLoc );
 
@@ -166,70 +169,27 @@ void opengl_draw_texture( GLuint texture,  GLuint program, const float scale_fac
 
 static struct timespec past = { 0 };
 
-void platform_opengl_draw(PlatformEGLContext* eglctx)
+
+void platform_opengl_draw(PlatformOpenGLContext* opengl_ctx)
 {
-	static int need_init = 1;
-	static GLuint vertex, fragment, program;
-	static GLuint texture = 0;
+
 	struct timespec current;
 	static int i = 80;
 	static int direction = 1;
 	static int averaging_frame = 0;
 
-	if( ! need_init )
-		goto partial_draw;
-
 	clock_gettime( CLOCK_REALTIME, &past );
-
-	GL_CHECK_ERROR( vertex = glCreateShader(GL_VERTEX_SHADER) )
-	GL_CHECK_ERROR( glShaderSource(vertex, 1, &vertex_source, NULL) )
-	GL_CHECK_ERROR( glCompileShader(vertex) )
-
-	GL_CHECK_ERROR( fragment = glCreateShader(GL_FRAGMENT_SHADER) )
-	GL_CHECK_ERROR( glShaderSource(fragment, 1, &fragment_source, NULL) )
-	GL_CHECK_ERROR( glCompileShader(fragment) );
-
-	GL_CHECK_ERROR( program = glCreateProgram() )
-	GL_CHECK_ERROR( glAttachShader(program, vertex) )
-	GL_CHECK_ERROR( glAttachShader(program, fragment) )
-
-	GL_CHECK_ERROR( glBindAttribLocation(program, 0, "position") )
-	GL_CHECK_ERROR( glBindAttribLocation(program, 1, "color") )
-
-	LINFO("=== Calling glLinkProgram()\n");
-	GL_CHECK_ERROR( glLinkProgram(program) )
-	GL_CHECK_ERROR( glFlush() )
-
-	LINFO("=== Calling glUseProgram()\n");
-	GL_CHECK_ERROR( glUseProgram(program) )
-	GL_CHECK_ERROR( glFlush() )
-
-	LINFO("=== calling glViewport()\n");
-	GL_CHECK_ERROR( glViewport(0, 0, eglctx->m_width, eglctx->m_height) )
-	GL_CHECK_ERROR( glFlush() )
-
-	LINFO("=== calling glClearColor()\n");
-
-	GL_CHECK_ERROR( glClearColor(0.0f, 0.0f, 0.0f, 0.0f) )
-	GL_CHECK_ERROR( glFlush() )
-
-
-	loadBMP_custom("./texture.bmp");
-
-        need_init = 0;
-
-partial_draw:
-	LINFO("=== calling glClear()\n");
+	//LINFO("=== calling glClear()");
 
 	GL_CHECK_ERROR( glClear(GL_COLOR_BUFFER_BIT) )
-	GL_CHECK_ERROR( glFlush() )
+//	GL_CHECK_ERROR( glFlush() )
 
-	if( ! texture )
+	if( ! opengl_ctx->m_texture )
 	{
-		texture = opengl_load_texture_in_gpu( data, width, height );
-		LDEBUG("texture = %u", texture );
+		opengl_ctx->m_texture = opengl_load_texture_in_gpu( data, width, height );
+		LDEBUG("texture = %u", opengl_ctx->m_texture  );
 	}
-	if( texture )
+	if( opengl_ctx->m_texture)
 	{
 		
 		i = i + direction;
@@ -239,40 +199,85 @@ partial_draw:
 			if( i < 80 )
 				direction = 1;
 
-		opengl_draw_texture( texture, program, i*0.01f );
-		//opengl_unload_texture_from_gpu(texture);
-		//texture = 0;
+	    opengl_draw_texture( opengl_ctx->m_texture, opengl_ctx->m_program, i*0.01f );
+
 	}
 	else
 	{
 		LWARN( "no texture");
 	}
-
-	LINFO("=== calling eglSwapBuffers()\n");
-	
-	platform_egl_context_swap_buffers(eglctx);
-	GL_CHECK_ERROR( glFinish() )
-	LINFO("=== done\n");
-	if( ++averaging_frame == 60 )
+	//LINFO("=== calling eglSwapBuffers()");
+	platform_egl_context_swap_buffers(opengl_ctx->m_egl_context);
+	//GL_CHECK_ERROR( glFinish() )
+	//LINFO("=== done");
+	//usleep(10000);
+	if( ++ averaging_frame == 100 )
 	{
 		clock_gettime(CLOCK_REALTIME, &current);
 		long milis = MILIS( current )- MILIS(past);
-		LINFO("FPS -----> %d",  1000*averaging_frame / milis  );
+		LINFO("FPS -----> %d",  (int)( 1000.0f *  averaging_frame / milis / 100  ) );
 		past = current;
 		averaging_frame = 0;
+
+		opengl_unload_texture_from_gpu(opengl_ctx->m_texture);
+		opengl_ctx->m_texture = 0;
 	}
 }
 
+PlatformOpenGLContext* platform_opengl_context_create( PlatformEGLContext* eglctx )
+{
+	GLint ret;
+	PlatformOpenGLContext * ctx = (PlatformOpenGLContext*) malloc( sizeof ( PlatformOpenGLContext ));
+	memset( ctx, 0, sizeof (PlatformOpenGLContext));
+	ctx->m_egl_context = eglctx;
 
-void platform_opengl_wiewport(PlatformEGLContext* eglctx,
+	GL_CHECK_ERROR( ctx->m_vertex_shader = glCreateShader(GL_VERTEX_SHADER) )
+	GL_CHECK_ERROR( glShaderSource(ctx->m_vertex_shader, 1, &vertex_source, NULL) )
+	GL_CHECK_ERROR( glCompileShader(ctx->m_vertex_shader) )
+
+	GL_CHECK_ERROR( ctx->m_fragment_shader = glCreateShader(GL_FRAGMENT_SHADER) )
+	GL_CHECK_ERROR( glShaderSource(ctx->m_fragment_shader, 1, &fragment_source, NULL) )
+	GL_CHECK_ERROR( glCompileShader(ctx->m_fragment_shader) );
+
+	GL_CHECK_ERROR( ctx->m_program = glCreateProgram() )
+	GL_CHECK_ERROR( glAttachShader(ctx->m_program, ctx->m_vertex_shader) )
+	GL_CHECK_ERROR( glAttachShader(ctx->m_program, ctx->m_fragment_shader) )
+
+	GL_CHECK_ERROR( glBindAttribLocation(ctx->m_program, 0, "position") )
+	GL_CHECK_ERROR( glBindAttribLocation(ctx->m_program, 1, "color") )
+
+	LINFO("=== Calling glLinkProgram()");
+	GL_CHECK_ERROR( glLinkProgram(ctx->m_program) )
+	GL_CHECK_ERROR( glGetProgramiv (ctx->m_program, GL_LINK_STATUS, &ret) )
+	assert (ret == GL_TRUE);
+
+	GL_CHECK_ERROR( glFlush() )
+
+	LINFO("=== Calling glUseProgram()");
+	GL_CHECK_ERROR( glUseProgram(ctx->m_program) )
+	GL_CHECK_ERROR( glFlush() )
+	LINFO("=== calling glViewport() : %d %d", eglctx->m_width, eglctx->m_height );
+	GL_CHECK_ERROR( glViewport(0, 0, eglctx->m_width, eglctx->m_height) )
+	GL_CHECK_ERROR( glFlush() )
+	GL_CHECK_ERROR( glClearColor( 1.0f, 0.0f, 0.0f, 1.0f ) );
+	return ctx;
+}
+
+
+void platform_opengl_init(PlatformOpenGLContext* eglctx)
+{
+	loadBMP_custom("./texture.bmp");
+}
+
+void platform_opengl_wiewport(PlatformOpenGLContext* eglctx,
 							   unsigned short orig_x,
 							   unsigned short orig_y,
 							   unsigned short width,
 							   unsigned short height)
 {
-	eglctx->m_width =  width;
-	eglctx->m_height = height;
-	LINFO("=== calling glViewport()\n");
-	GL_CHECK_ERROR( glViewport(orig_x, orig_y, eglctx->m_width, eglctx->m_height) )
+	eglctx->m_egl_context->m_width =  width;
+	eglctx->m_egl_context->m_height = height;
+	LINFO("=== calling glViewport() %d %d %d %d\n", orig_x, orig_y, width, height);
+	GL_CHECK_ERROR( glViewport(orig_x, orig_y, eglctx->m_egl_context->m_width, eglctx->m_egl_context->m_height ) )
 	GL_CHECK_ERROR( glFlush() )
 }

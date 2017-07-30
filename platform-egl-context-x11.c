@@ -74,7 +74,7 @@ static int platform_egl_context_close_x11(PlatformEGLContextX11 *ctx_x11)
 	return 0;
 }
 
-static void platform_egl_context_event_loop_x11(PlatformEGLContextX11* eglctx)
+static void platform_egl_context_event_loop_x11(PlatformEGLContextX11* eglctx,  PlatformOpenGLContext *opengl_ctx)
 {
 	while (1)
 	{
@@ -90,7 +90,7 @@ static void platform_egl_context_event_loop_x11(PlatformEGLContextX11* eglctx)
 				break;
 
 			case ConfigureNotify:
-				platform_opengl_wiewport((PlatformEGLContext*)eglctx, 0,0, event.xconfigure.width, event.xconfigure.height );
+				platform_opengl_wiewport(opengl_ctx, 0,0, event.xconfigure.width, event.xconfigure.height );
 				break;
 
 			case KeyPress:
@@ -102,7 +102,7 @@ static void platform_egl_context_event_loop_x11(PlatformEGLContextX11* eglctx)
 				break;
 			}
 		}
-		platform_opengl_draw((PlatformEGLContext*)eglctx);
+		platform_opengl_draw(opengl_ctx);
 	}
 }
 
@@ -140,7 +140,6 @@ static int platform_egl_context_create_window(PlatformEGLContextX11* eglctx)
 	EGLint vid;
 
 
-	platform_egl_context_display_open_x11(eglctx);
 
 	screen = DefaultScreen(eglctx->m_native_x_display);
 	root = RootWindow(eglctx->m_native_x_display, screen);
@@ -216,7 +215,7 @@ static int platform_egl_context_create_window(PlatformEGLContextX11* eglctx)
 					eglctx->m_parent_ctx.m_egl_ctx,
 					EGL_CONTEXT_CLIENT_VERSION,
 					&version);
-	printf("OpenGL ES: %d\n", version);
+	LINFO("OpenGL ES: %d\n", version);
 
 	eglctx->m_parent_ctx.m_egl_surf = eglCreateWindowSurface(eglctx->m_parent_ctx.m_egl_dpy,
 											 config,
@@ -302,10 +301,10 @@ void platform_egl_context_deinit( PlatformEGLContext *ctx )
 }
 
 
-void platform_egl_context_mainloop( PlatformEGLContext *ctx )
+void platform_opengl_mainloop( PlatformOpenGLContext *opengl_ctx )
 {
-	PlatformEGLContextX11* ctx_x11 = ( PlatformEGLContextX11 *)ctx;
-	platform_egl_context_event_loop_x11( ctx_x11 );
+	PlatformEGLContextX11* ctx_x11 = ( PlatformEGLContextX11 *) opengl_ctx->m_egl_context;
+	platform_egl_context_event_loop_x11( ctx_x11, opengl_ctx );
 }
 
 

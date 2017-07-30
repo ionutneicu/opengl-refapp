@@ -19,7 +19,6 @@ extern PlatformEGLContext* platform_egl_context_create();
 extern void platform_egl_context_destroy( PlatformEGLContext *ctx );
 extern int  platform_egl_context_init( PlatformEGLContext *ctx );
 extern void platform_egl_context_deinit( PlatformEGLContext *ctx );
-extern void platform_egl_context_mainloop( PlatformEGLContext *ctx );
 extern void platform_egl_context_swap_buffers( PlatformEGLContext *ctx );
 
 
