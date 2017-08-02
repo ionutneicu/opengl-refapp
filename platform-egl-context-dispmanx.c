@@ -14,7 +14,7 @@
 #include <GLES2/gl2.h>
 
 /*TODO circular dependency between OpenGL and EGL*/
-#include "platform-opengl-draw.h"
+#include "opengl-context.h"
 
 #define ERR_EGL_DISPLAY_ERROR -10
 #define ERR_EGL_INIT_FAILED   -11
@@ -156,6 +156,7 @@ int  platform_egl_context_init( PlatformEGLContext *ctx )
 	PlatformEGLContextDispmanX* ctx_dispmanx = ( PlatformEGLContextDispmanX *)ctx;
 	if( ctx_dispmanx->m_parent_ctx.m_initialized )
 		return ERR_EGL_CONTEXT_ALREADY_INITIALIZED;
+
 	bcm_host_init();
 	rc = platform_egl_context_display_open_dispmanx(ctx_dispmanx);
 	if( rc )
@@ -188,11 +189,11 @@ void platform_egl_context_deinit( PlatformEGLContext *ctx )
 }
 
 
-void platform_opengl_mainloop( PlatformOpenGLContext *ctx )
+void platform_opengl_mainloop( OpenGLContext *ctx, user_loop_function_pf user_loop )
 {
 	while(1)
 	{
-		platform_opengl_draw( ctx );
+		platform_opengl_draw( ctx, user_loop );
 	}
 }
 

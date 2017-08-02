@@ -1,4 +1,4 @@
-OBJS=main.o platform-egl-log.o platform-opengl-draw.o 
+OBJS=main.o platform-egl-log.o opengl-context.o 
 BIN=refapp.bin
 
 include ./Makefile.include

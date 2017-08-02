@@ -9,7 +9,7 @@
 #include "platform-egl-log.h"
 
 /*TODO circular dependency between OpenGL and EGL*/
-#include "platform-opengl-draw.h"
+#include "opengl-context.h"
 
 #define ERR_CANNOT_OPEN_DISPLAY  		-1
 #define ERR_CANNOT_GET_EGL_DISPLAY		-2
@@ -74,8 +74,10 @@ static int platform_egl_context_close_x11(PlatformEGLContextX11 *ctx_x11)
 	return 0;
 }
 
-static void platform_egl_context_event_loop_x11(PlatformEGLContextX11* eglctx,  PlatformOpenGLContext *opengl_ctx)
+static void platform_egl_context_event_loop_x11(PlatformEGLContextX11* eglctx,  OpenGLContext *opengl_ctx,  user_loop_function_pf user_loop)
 {
+	static int xwidth = 1;
+	static int xheight = 1;
 	while (1)
 	{
 		char buffer[16];
@@ -90,7 +92,12 @@ static void platform_egl_context_event_loop_x11(PlatformEGLContextX11* eglctx,  
 				break;
 
 			case ConfigureNotify:
-				platform_opengl_wiewport(opengl_ctx, 0,0, event.xconfigure.width, event.xconfigure.height );
+				if( event.xconfigure.width != xwidth || event.xconfigure.height != xheight )
+				{
+					opengl_wiewport(opengl_ctx, 0,0, event.xconfigure.width, event.xconfigure.height );
+					xwidth = event.xconfigure.width;
+					xheight = event.xconfigure.height;
+				}
 				break;
 
 			case KeyPress:
@@ -102,13 +109,13 @@ static void platform_egl_context_event_loop_x11(PlatformEGLContextX11* eglctx,  
 				break;
 			}
 		}
-		platform_opengl_draw(opengl_ctx);
+		opengl_draw(opengl_ctx, user_loop);
 	}
 }
 
 
 
-static int platform_egl_context_create_window(PlatformEGLContextX11* eglctx)
+static int platform_egl_context_create_window(PlatformEGLContextX11* eglctx )
 {
 	static const EGLint attribs[] = {
 		EGL_RED_SIZE, 1,
@@ -256,6 +263,7 @@ static void platform_egl_context_show_window_x11(PlatformEGLContextX11 *eglctx)
 	{
 		LERROR("eglMakeCurrent():\n");
 	}
+	eglSwapBuffers(eglctx->m_parent_ctx.m_egl_dpy, eglctx->m_parent_ctx.m_egl_surf);
 	XFlush(eglctx->m_native_x_display);
 }
 
@@ -287,7 +295,8 @@ int  platform_egl_context_init( PlatformEGLContext *ctx )
 		return rc;
 
     platform_egl_context_show_window_x11(ctx_x11);
-	ctx_x11->m_parent_ctx.m_initialized = 1;
+
+    	ctx_x11->m_parent_ctx.m_initialized = 1;
 	return rc;
 }
 
@@ -301,10 +310,10 @@ void platform_egl_context_deinit( PlatformEGLContext *ctx )
 }
 
 
-void platform_opengl_mainloop( PlatformOpenGLContext *opengl_ctx )
+void opengl_mainloop( OpenGLContext *opengl_ctx, user_loop_function_pf user_loop )
 {
-	PlatformEGLContextX11* ctx_x11 = ( PlatformEGLContextX11 *) opengl_ctx->m_egl_context;
-	platform_egl_context_event_loop_x11( ctx_x11, opengl_ctx );
+	PlatformEGLContextX11* ctx_x11 = ( PlatformEGLContextX11 *) opengl_get_egl_context( opengl_ctx );
+	platform_egl_context_event_loop_x11( ctx_x11, opengl_ctx, user_loop );
 }
 
 

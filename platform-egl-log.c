@@ -16,6 +16,7 @@
 
 inline void platform_egl_varlog( 	const log_level_t level,
                          	 	 	const char *file,
+                         	 	 	const char *function,
                          	 	 	const unsigned int line,
                          	 	 	const char* format, ... )
 {
@@ -27,16 +28,16 @@ inline void platform_egl_varlog( 	const log_level_t level,
     switch( level )
     {
     	case	LL_DEBUG :
-    			fprintf(stdout,"DEBUG: %s:%d %s\n", file, line, dest );
+    			fprintf(stdout,"DEBUG: %s:%d [%s] %s\n", file, line, function, dest );
     	break;
     	case	LL_INFO :
-    			fprintf(stdout,"INFO : %s:%d %s\n", file, line, dest );
+    			fprintf(stdout,"INFO : %s:%d [%s] %s\n", file, line, function, dest );
     	break;
     	case	LL_WARN :
-    		fprintf(stderr,"WARN : %s:%d %s\n", file, line, dest );
+    		fprintf(stderr,"WARN : %s:%d [%s] %s\n", file, line, function, dest );
     	break;
     	case	LL_ERROR :
-    			fprintf(stderr,"ERROR: %s:%d %s\n", file, line, dest );
+    			fprintf(stderr,"ERROR: %s:%d [%s] %s\n", file, line, function, dest );
     	break;
     }
 }
