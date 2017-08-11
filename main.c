@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <getopt.h>
 #include "platform-egl-log.h"
 
 #include "platform-egl-context.h"
@@ -43,6 +44,7 @@ typedef struct tagOpenGLUserContext
 	int         m_texture_width;
 	int			m_texture_height;
 	char*		m_texture_data;
+	int			m_numframes;
 } OpenGLUserContext;
 
 #define USER_CONTEXT( __ctx__ ) ( (OpenGLUserContext*)__ctx__->user_ctx );
@@ -50,8 +52,18 @@ typedef struct tagOpenGLUserContext
 #define SUCCESS 	0
 #define EGL_ERROR  -1
 
+#define NO_LIMIT    0
 
-int loadBMP_custom(const char * imagepath, OpenGLUserContext * context )
+static const char file_name[] = "texture.bmp";
+
+/**
+ * load_bmp_custom loads the bmp file into RGBA compatible texture data
+ * that can be used later as parameter for opengl_load_texture_in_gpu() function
+ * @param imagepath - the (relative) path of the file. This path is relative to the working dir.
+ * @param user_context - user context in which texture is loaded
+ * @return 0 for success, or non-zero error code
+ */
+int load_bmp_custom(const char * imagepath, OpenGLUserContext * user_context )
 {
 	unsigned char header[54];
 	unsigned int dataPos;
@@ -67,7 +79,7 @@ int loadBMP_custom(const char * imagepath, OpenGLUserContext * context )
 
 	if( fread(header, 1, 54, file ) != 54 )
 	{
-		printf("Not a correct BMP file\n\r");
+		printf("Not a correct BMP file, too short\n\r");
 		return -2;
 	}
 
@@ -78,16 +90,16 @@ int loadBMP_custom(const char * imagepath, OpenGLUserContext * context )
 	}
 
 	dataPos   =  *(int*)&(header[0x0A]);
-	context->m_texture_width     =  *(int*)&(header[0x12]);
-	context->m_texture_height    =  *(int*)&(header[0x16]);
+	user_context->m_texture_width     =  *(int*)&(header[0x12]);
+	user_context->m_texture_height    =  *(int*)&(header[0x16]);
 	imageSize =  *(int*)&(header[0x22]);
 
-	context->m_texture_data = (char*)malloc(  context->m_texture_width*context->m_texture_height*4 );
-	memset( context->m_texture_data, 0xff,  context->m_texture_width*context->m_texture_height*3 );
+	user_context->m_texture_data = (char*)malloc(  user_context->m_texture_width*user_context->m_texture_height*4 );
+	memset( user_context->m_texture_data, 0xff,  user_context->m_texture_width*user_context->m_texture_height*3 );
 
-	printf("found bitmap in file, width=%d, height=%d, image_size=%d\n\r", context->m_texture_width, context->m_texture_height, imageSize );
-	if ( imageSize == 0 ) imageSize = context->m_texture_width*context->m_texture_height*3;
-	if( imageSize != context->m_texture_width*context->m_texture_height*3 )
+	printf("found bitmap in file, width=%d, height=%d, image_size=%d\n\r", user_context->m_texture_width, user_context->m_texture_height, imageSize );
+	if ( imageSize == 0 ) imageSize = user_context->m_texture_width*user_context->m_texture_height*3;
+	if( imageSize != user_context->m_texture_width*user_context->m_texture_height*3 )
 			return -5;
 
 	if ( dataPos == 0 )
@@ -95,40 +107,41 @@ int loadBMP_custom(const char * imagepath, OpenGLUserContext * context )
 
 	fseek( file, dataPos , SEEK_SET );
 
-	char tmpdata[ context->m_texture_width*context->m_texture_height*4 ];
+	char tmpdata[ user_context->m_texture_width*user_context->m_texture_height*4 ];
 
 
 	fread( tmpdata,1,imageSize,file );
 
-	for( i = 0; i < context->m_texture_width*context->m_texture_height; ++ i )
+	for( i = 0; i < user_context->m_texture_width*user_context->m_texture_height; ++ i )
 	{
 
-		context->m_texture_data[ 4*i ]   = tmpdata[ 3*i + 2 ];
-		context->m_texture_data[ 4*i+1 ] = tmpdata[ 3*i + 1 ];
-		context->m_texture_data[ 4*i+2 ] = tmpdata[ 3*i  ];
-		context->m_texture_data[ 4*i+3 ] = 0xFF;
-
-#if 0
-		context->m_texture_data[ 4*i ]   = tmpdata[ 3*i + 1 ];
-		context->m_texture_data[ 4*i+1 ] = tmpdata[ 3*i ];
-		context->m_texture_data[ 4*i+2 ] = tmpdata[ 3*i+2 ];
-		context->m_texture_data[ 4*i+3 ] = 0xFF;
-
-		context->m_texture_data[ 4*i ]   = 0xFF;
-		context->m_texture_data[ 4*i+1 ] = 0x00;
-		context->m_texture_data[ 4*i+2 ] = 0xFF;
-		context->m_texture_data[ 4*i+3 ] = 0xFF;
-#endif
+		user_context->m_texture_data[ 4*i ]   = tmpdata[ 3*i + 2 ];
+		user_context->m_texture_data[ 4*i+1 ] = tmpdata[ 3*i + 1 ];
+		user_context->m_texture_data[ 4*i+2 ] = tmpdata[ 3*i  ];
+		user_context->m_texture_data[ 4*i+3 ] = 0xFF;
 	}
 
 	fclose(file);
 	return 0;
 }
 
+
+int user_init_context( OpenGLUserContext* user_ctx, int num_frames )
+{
+	int rc = 0;
+	user_ctx->m_numframes = num_frames;
+	if( ( rc = load_bmp_custom( file_name, user_ctx) ) != 0 )
+	{
+		fprintf(stderr, "loading resource failed, %s  with code %d\n", file_name, rc );
+		return rc;
+	}
+
+}
+
 int user_loop_function( OpenGLContext * ctx )
 {
-	static int i = 80;
-	static int direction = 1;
+	static int scaling_percent = 80;
+	static int scaling_increment = 1;
 
 	OpenGLUserContext* user_ctx = ( OpenGLUserContext *) opengl_context_get_user_ctx( ctx );
 	if( ! user_ctx->m_texture_id )
@@ -141,13 +154,24 @@ int user_loop_function( OpenGLContext * ctx )
 	if( user_ctx->m_texture_id )
 	{
 
-			i = i + direction;
-			if( i > 120 )
-				direction = -1;
-			else if( i < 80 )
-				direction = 1;
+			scaling_percent = scaling_percent + scaling_increment;
+			if( scaling_percent > 120 )
+				scaling_increment = -1;
+			else
+				if( scaling_percent < 80 )
+					scaling_increment = 1;
 
-		    opengl_draw_texture( ctx, user_ctx->m_texture_id, i*0.01f );
+		    opengl_draw_texture( ctx, user_ctx->m_texture_id, scaling_percent*0.01f );
+		    if( user_ctx->m_numframes != 0 )
+		    {
+		    	-- user_ctx->m_numframes;
+		    	if( user_ctx->m_numframes == 0 )
+		    	{
+		    		LINFO("reached max number of frames");
+		    		return -1;
+		    	}
+
+		    }
 
 	}
 	else
@@ -158,9 +182,45 @@ int user_loop_function( OpenGLContext * ctx )
 	return 0;
 }
 
+void print_usage()
+{
+
+}
+
 int main(int argc, char *argv[])
 {
 	int rc;
+    int long_index = 0;
+	int numloops = NO_LIMIT;
+    //Specifying the expected options
+    //The two options l and b expect numbers as argument
+    static struct option long_options[] = {
+        {"loops",     required_argument, 0,  'l' },
+        {0,           0,                 0,  0   }
+    };
+
+
+    while ((rc = getopt_long(argc, argv,"l:", long_options, &long_index )) != -1)
+    {
+    	switch (rc) {
+    		case 'l' :
+    				if( strcmp(optarg, "infinite") == 0 )
+    					numloops = NO_LIMIT;
+    				else
+    					numloops = atoi(optarg);
+    		break;
+
+    		default:
+    			print_usage();
+    			exit(EXIT_FAILURE);
+    	}
+    }
+
+	if (numloops < 0 ) {
+		print_usage();
+		exit(EXIT_FAILURE);
+	}
+	printf("loops = %d\n", numloops);
 
 	PlatformEGLContext* eglctx = platform_egl_context_create();
 	OpenGLContext *oglctx;
@@ -178,11 +238,28 @@ int main(int argc, char *argv[])
 	}
 
 	oglctx = opengl_context_create( eglctx );
+	/**
+	 * Creating and attaching our own user context.
+	 * This will contain different information to draw, like textures.
+	 */
+	user_init_context( &user_ctx , numloops);
 	opengl_context_attach_user_ctx( oglctx, &user_ctx);
 
-	loadBMP_custom( "texture.bmp", &user_ctx);
+
+	/**
+	 * Run the opengl loop. This will call user_loop_function for each frame
+	 * at the full speed of HW.
+	 * The user_loop_function must know about user context and treat it
+	 * it can do custom draw and animations, load/unload textures, using functions
+	 * defined in opengl-context.c
+	 */
 
 	opengl_mainloop( oglctx,  (user_loop_function_pf) user_loop_function );
+
+	LINFO("exiting opengl loop");
+
+	opengl_context_destroy(oglctx);
+
 	platform_egl_context_deinit( eglctx );
 	platform_egl_context_destroy( eglctx );
 	return SUCCESS;

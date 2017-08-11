@@ -16,6 +16,8 @@ typedef struct tagOpenGLContext OpenGLContext;
 typedef int ( *user_loop_function_pf)( OpenGLContext *ctx );
 
 OpenGLContext* 		opengl_context_create( PlatformEGLContext* eglctx );
+void 				opengl_context_destroy( OpenGLContext* 	   oglctx );
+
 PlatformEGLContext* opengl_get_egl_context( OpenGLContext* ctx );
 void  				opengl_context_attach_user_ctx( OpenGLContext* ctx, void *private_data );
 void* 				opengl_context_get_user_ctx( OpenGLContext* ctx );
@@ -28,7 +30,13 @@ void 				opengl_wiewport(OpenGLContext* eglctx,
 							   unsigned short orig_y,
 							   unsigned short width,
 							   unsigned short height);
-void 				opengl_draw(OpenGLContext* opengl_ctx,
+/**
+ *
+ * @param opengl_ctx
+ * @param user_loop
+ * @return 0 to continue or non-zero error code
+ */
+int 				opengl_draw(OpenGLContext* opengl_ctx,
 								user_loop_function_pf user_loop);
 
 #endif /* OPENGL_CONTEXT_H_ */

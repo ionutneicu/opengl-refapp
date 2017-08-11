@@ -20,6 +20,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+
+#define NOTHING_TO_DRAW -1
+#define SUCCCESS		0
+
+
 #define GL_CHECK_ERROR( __x__ ) __x__ ; if ((error=glGetError()) != GL_NO_ERROR) { LERROR("-----> %s %s: ERROR %d at line %d", #__x__, __FUNCTION__ , error,  __LINE__ ); }
 int error;
 
@@ -117,13 +122,14 @@ void opengl_draw_texture( OpenGLContext* ctx, GLuint texture, const float scale_
 
 
 
-void opengl_draw(OpenGLContext* opengl_ctx, user_loop_function_pf user_loop)
+int opengl_draw(OpenGLContext* opengl_ctx, user_loop_function_pf user_loop)
 {
 
 	struct timespec current;
 	static int num_frames = 0;
 	static struct timespec past = { 0 };
 	static long milis = 0;
+	int rc;
 
 	if( past.tv_sec == 0 )
 	{
@@ -133,8 +139,13 @@ void opengl_draw(OpenGLContext* opengl_ctx, user_loop_function_pf user_loop)
 	GL_CHECK_ERROR( glClear(GL_COLOR_BUFFER_BIT) )
 
 	if( user_loop )
-		user_loop( opengl_ctx );
-
+	{
+		rc = user_loop( opengl_ctx );
+		if( rc )
+			return rc;
+	}
+	else
+		return NOTHING_TO_DRAW;
 
 	platform_egl_context_swap_buffers(opengl_ctx->m_egl_context);
 
@@ -153,6 +164,7 @@ void opengl_draw(OpenGLContext* opengl_ctx, user_loop_function_pf user_loop)
 		milis = 0;
 		num_frames =0;
 	}
+	return SUCCCESS;
 }
 
 OpenGLContext* opengl_context_create( PlatformEGLContext* eglctx )
@@ -192,6 +204,11 @@ OpenGLContext* opengl_context_create( PlatformEGLContext* eglctx )
 	GL_CHECK_ERROR( glFlush() )
 	GL_CHECK_ERROR( glClearColor( 1.0f, 0.0f, 0.0f, 1.0f ) );
 	return ctx;
+}
+
+void opengl_context_destroy( OpenGLContext* 	   oglctx )
+{
+	free(oglctx);
 }
 
 

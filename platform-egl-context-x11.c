@@ -109,7 +109,8 @@ static void platform_egl_context_event_loop_x11(PlatformEGLContextX11* eglctx,  
 				break;
 			}
 		}
-		opengl_draw(opengl_ctx, user_loop);
+		if( opengl_draw(opengl_ctx, user_loop) )
+			break;
 	}
 }
 
