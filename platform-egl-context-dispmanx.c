@@ -52,7 +52,8 @@ static int platform_egl_context_display_open_dispmanx(PlatformEGLContextDispmanX
       EGL_BLUE_SIZE, 8,
       EGL_ALPHA_SIZE, 8,
       EGL_DEPTH_SIZE, 16,
-      EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+      EGL_SURFACE_TYPE,
+      EGL_WINDOW_BIT,
       EGL_NONE
     };
 
@@ -174,7 +175,6 @@ int  platform_egl_context_init( PlatformEGLContext *ctx )
 	else
 	{
 
-		//platform_opengl_wiewport(ctx, 0,0, ctx->m_width, ctx->m_height);
 		platform_egl_context_swap_buffers(ctx);
 		ctx_dispmanx->m_parent_ctx.m_initialized = 1;
 	}

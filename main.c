@@ -35,8 +35,9 @@
 #include <GLES2/gl2.h>
 
 /**
- * OpenGLUserContext - an arbitrary data, maintained by user that is passed to opengl as "user context"
- * Here we have one texture. Texture goes initially in CPU as { data, width, height } then loaded in GPU as id.
+ * OpenGLUserContext - an arbitrary, user-defined data, maintained by user that is passed to opengl as "user context"
+ * In our case we have one texture. Texture goes initially in CPU as { data, width, height } then loaded in GPU as id.
+ * Once loaded in GPU, data can be discarded from CPU.
  */
 typedef struct tagOpenGLUserContext
 {
@@ -115,10 +116,10 @@ int load_bmp_custom(const char * imagepath, OpenGLUserContext * user_context )
 	for( i = 0; i < user_context->m_texture_width*user_context->m_texture_height; ++ i )
 	{
 
-		user_context->m_texture_data[ 4*i ]   = tmpdata[ 3*i + 2 ];
-		user_context->m_texture_data[ 4*i+1 ] = tmpdata[ 3*i + 1 ];
-		user_context->m_texture_data[ 4*i+2 ] = tmpdata[ 3*i  ];
-		user_context->m_texture_data[ 4*i+3 ] = 0xFF;
+		user_context->m_texture_data[ 4*i ]   = tmpdata[ 3*i + 2 ];  /*R*/
+		user_context->m_texture_data[ 4*i+1 ] = tmpdata[ 3*i + 1 ];  /*G*/
+		user_context->m_texture_data[ 4*i+2 ] = tmpdata[ 3*i  ];     /*B*/
+		user_context->m_texture_data[ 4*i+3 ] = 0xFF;                /*A*/
 	}
 
 	fclose(file);
@@ -133,9 +134,8 @@ int user_init_context( OpenGLUserContext* user_ctx, int num_frames )
 	if( ( rc = load_bmp_custom( file_name, user_ctx) ) != 0 )
 	{
 		fprintf(stderr, "loading resource failed, %s  with code %d\n", file_name, rc );
-		return rc;
 	}
-
+	return rc;
 }
 
 int user_loop_function( OpenGLContext * ctx )
@@ -172,7 +172,6 @@ int user_loop_function( OpenGLContext * ctx )
 		    	}
 
 		    }
-
 	}
 	else
 	{
@@ -256,11 +255,12 @@ int main(int argc, char *argv[])
 
 	opengl_mainloop( oglctx,  (user_loop_function_pf) user_loop_function );
 
-	LINFO("exiting opengl loop");
+	LINFO("exiting app's main loop");
 
 	opengl_context_destroy(oglctx);
 
 	platform_egl_context_deinit( eglctx );
 	platform_egl_context_destroy( eglctx );
+
 	return SUCCESS;
 }
