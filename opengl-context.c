@@ -25,8 +25,8 @@
 #define SUCCCESS		0
 
 
-#define GL_CHECK_ERROR( __x__ ) __x__ ; if ((error=glGetError()) != GL_NO_ERROR) { LERROR("-----> %s %s: ERROR %d at line %d", #__x__, __FUNCTION__ , error,  __LINE__ ); }
-int error;
+#define GL_CHECK_ERROR( __x__ ) __x__ ; if ((opengl_error=glGetError()) != GL_NO_ERROR) { LERROR("-----> %s %s: ERROR %d at line %d", #__x__, __FUNCTION__ , opengl_error,  __LINE__ ); }
+int opengl_error;
 
 #define MILIS( __x__ )  ( ( __x__.tv_sec*1000 )  + ( __x__.tv_nsec / 1000000 ) )
 
@@ -55,6 +55,7 @@ static const char *fragment_source =
 
 GLuint opengl_load_texture_in_gpu( void* texture_data, unsigned int tex_width, unsigned int tex_height )
 {
+	/*TODO: this function does not return any error !!!!*/
 	GLuint textureID = 1;
 	GL_CHECK_ERROR( glGenTextures(1, &textureID) )
 	GL_CHECK_ERROR( glBindTexture(GL_TEXTURE_2D, textureID) )

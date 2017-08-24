@@ -53,10 +53,12 @@ typedef struct tagOpenGLUserContext
 #define SUCCESS 	0
 #define EGL_ERROR  -1
 
-#define NO_LIMIT    0
+#define NO_LIMIT    -1
 
 static const char file_name[] = "texture.bmp";
-
+int   reload_textures = 0;
+int   leak_textures   = 0;
+int   loaded_gpu_texture_data = 0;
 /**
  * load_bmp_custom loads the bmp file into RGBA compatible texture data
  * that can be used later as parameter for opengl_load_texture_in_gpu() function
@@ -69,7 +71,7 @@ int load_bmp_custom(const char * imagepath, OpenGLUserContext * user_context )
 	unsigned char header[54];
 	unsigned int dataPos;
 	unsigned int imageSize;
-	int i;
+	int i, rc;
 
 	FILE * file = fopen(imagepath,"rb");
 	if (!file)
@@ -106,16 +108,25 @@ int load_bmp_custom(const char * imagepath, OpenGLUserContext * user_context )
 	if ( dataPos == 0 )
 		dataPos = 54;
 
-	fseek( file, dataPos , SEEK_SET );
+	rc = fseek( file, dataPos , SEEK_SET );
+	if( !rc )
+	{
+		LERROR("could not seek file, fatal error");
+		exit -1;
+	}
 
 	char tmpdata[ user_context->m_texture_width*user_context->m_texture_height*4 ];
 
 
-	fread( tmpdata,1,imageSize,file );
+    rc = fread( tmpdata, imageSize, 1, file );
+    if( rc != 1 )
+    {
+    	LERROR("could not read the bitmap file, fatal error");
+    	exit -1;
+    }
 
 	for( i = 0; i < user_context->m_texture_width*user_context->m_texture_height; ++ i )
 	{
-
 		user_context->m_texture_data[ 4*i ]   = tmpdata[ 3*i + 2 ];  /*R*/
 		user_context->m_texture_data[ 4*i+1 ] = tmpdata[ 3*i + 1 ];  /*G*/
 		user_context->m_texture_data[ 4*i+2 ] = tmpdata[ 3*i  ];     /*B*/
@@ -149,6 +160,7 @@ int user_loop_function( OpenGLContext * ctx )
 		LDEBUG("LOADING TEXTURE %dx%d", user_ctx->m_texture_width, user_ctx->m_texture_height );
 		user_ctx->m_texture_id = opengl_load_texture_in_gpu( user_ctx->m_texture_data, user_ctx->m_texture_width, user_ctx->m_texture_height );
 		LDEBUG("texture = %u", user_ctx->m_texture_id );
+		loaded_gpu_texture_data += 4*user_ctx->m_texture_width*user_ctx->m_texture_height;
 	}
 
 	if( user_ctx->m_texture_id )
@@ -172,6 +184,15 @@ int user_loop_function( OpenGLContext * ctx )
 		    	}
 
 		    }
+		    if( reload_textures || leak_textures )
+		    {
+		    	if( ! leak_textures )
+		    	{
+		    		opengl_unload_texture_from_gpu( user_ctx->m_texture_id );
+		    		loaded_gpu_texture_data -= 4*user_ctx->m_texture_width*user_ctx->m_texture_height;
+		    	}
+		    	user_ctx->m_texture_id = 0;
+		    }
 	}
 	else
 	{
@@ -194,8 +215,14 @@ int main(int argc, char *argv[])
     //Specifying the expected options
     //The two options l and b expect numbers as argument
     static struct option long_options[] = {
-        {"loops",     required_argument, 0,  'l' },
-        {0,           0,                 0,  0   }
+        {"loops",     						  required_argument, 0,  'l' },  /*!< after setting OpenGL, display a number of loops and exit, default is 0 which means run forever */
+        {"reload_texture_on_every_frame",     no_argument, 0,  'r' },        /*!< reload-texture on every frame - need this to assed CPU=>GPU bandwidth */
+        {"leak_textures",     				  no_argument, 0,  'k' },        /*!< makes sense with above reload-texture - don't delete previous texture, determine max amount of textures that fit the GPU */
+        {"gather_statistics",				  no_argument, 0,  's' },        /*!< print final statistics at the end of the process */
+        {"break_textures",					  required_argument, 0, 'b' },  /*!< when displaying, use NxN tiles to display textures */
+        {"compress_textures",				  required_argument, 0, 'c' },  /*!< use certain, TODO: tbd compression */
+        {"log_level",						  required_argument, 0, 'v' },   /*!< log_level, off, error, warning, debug, verbose */
+        {0,0,0,0}
     };
 
 
@@ -208,6 +235,13 @@ int main(int argc, char *argv[])
     				else
     					numloops = atoi(optarg);
     		break;
+    		case 'r':
+    			reload_textures = 1;
+    			LWARN("cmdline option: reload texture on every, this will affect performance");
+    		break;
+    		case 'k':
+    			leak_textures = 1;
+    			LWARN("cmdline option: leak textures, this is only for debugging purposes");
 
     		default:
     			print_usage();

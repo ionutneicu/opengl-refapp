@@ -12,21 +12,13 @@ without warranty of any kind.
 Basic Installation
 ==================
 
-1. Installation on X11 systems is, in brief:
-
-	`./configure --enable-x11 && make && make install'
-
-2. For Raspberry PI the same command is:
-	`./configure --enable-dspmanx && make && make install`
-
-
-The above command should configure, build, and install this package.  
-The following more-detailed instructions are generic; 
-see the `README' file for instructions specific to this package.  
-Some packages provide this `INSTALL' file but do not implement all of
-the features documented below.
-The lack of an optional feature in a given package is not necessarily 
-a bug.  More recommendations for GNU packages can be found
+   Briefly, the shell command `./configure && make && make install'
+should configure, build, and install this package.  The following
+more-detailed instructions are generic; see the `README' file for
+instructions specific to this package.  Some packages provide this
+`INSTALL' file but do not implement all of the features documented
+below.  The lack of an optional feature in a given package is not
+necessarily a bug.  More recommendations for GNU packages can be found
 in *note Makefile Conventions: (standards)Makefile Conventions.
 
    The `configure' shell script attempts to guess correct values for
