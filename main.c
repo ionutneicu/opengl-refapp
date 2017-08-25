@@ -45,7 +45,8 @@ typedef struct tagOpenGLUserContext
 	int         m_texture_width;
 	int			m_texture_height;
 	char*		m_texture_data;
-	int			m_numframes;
+	short		m_unlimited_frames;
+	long		m_numframes;
 } OpenGLUserContext;
 
 #define USER_CONTEXT( __ctx__ ) ( (OpenGLUserContext*)__ctx__->user_ctx );
@@ -109,7 +110,7 @@ int load_bmp_custom(const char * imagepath, OpenGLUserContext * user_context )
 		dataPos = 54;
 
 	rc = fseek( file, dataPos , SEEK_SET );
-	if( !rc )
+	if( rc  )
 	{
 		LERROR("could not seek file, fatal error");
 		exit -1;
@@ -138,10 +139,11 @@ int load_bmp_custom(const char * imagepath, OpenGLUserContext * user_context )
 }
 
 
-int user_init_context( OpenGLUserContext* user_ctx, int num_frames )
+int user_init_context( OpenGLUserContext* user_ctx, int num_frames, int unlimited_frames )
 {
 	int rc = 0;
 	user_ctx->m_numframes = num_frames;
+	user_ctx->m_unlimited_frames = unlimited_frames;
 	if( ( rc = load_bmp_custom( file_name, user_ctx) ) != 0 )
 	{
 		fprintf(stderr, "loading resource failed, %s  with code %d\n", file_name, rc );
@@ -153,12 +155,30 @@ int user_loop_function( OpenGLContext * ctx )
 {
 	static int scaling_percent = 80;
 	static int scaling_increment = 1;
+	int rc;
 
 	OpenGLUserContext* user_ctx = ( OpenGLUserContext *) opengl_context_get_user_ctx( ctx );
+
+    if( user_ctx->m_unlimited_frames == 0 )
+    {
+
+    	if( user_ctx->m_numframes -- == 0 )
+    	{
+    		LINFO("reached max number of frames");
+    		return -1;
+    	}
+    }
+
+
 	if( ! user_ctx->m_texture_id )
 	{
-		LDEBUG("LOADING TEXTURE %dx%d", user_ctx->m_texture_width, user_ctx->m_texture_height );
-		user_ctx->m_texture_id = opengl_load_texture_in_gpu( user_ctx->m_texture_data, user_ctx->m_texture_width, user_ctx->m_texture_height );
+		LDEBUG("LOADING TEXTURE [%dx%d]", user_ctx->m_texture_width, user_ctx->m_texture_height );
+		rc = opengl_load_texture_in_gpu( user_ctx->m_texture_data, user_ctx->m_texture_width, user_ctx->m_texture_height, &user_ctx->m_texture_id );
+		if( rc != GL_NO_ERROR )
+		{
+			LERROR("could not load texture, GPU memory full ? total texture loaded data: %l", loaded_gpu_texture_data );
+			return -2;
+		}
 		LDEBUG("texture = %u", user_ctx->m_texture_id );
 		loaded_gpu_texture_data += 4*user_ctx->m_texture_width*user_ctx->m_texture_height;
 	}
@@ -174,16 +194,7 @@ int user_loop_function( OpenGLContext * ctx )
 					scaling_increment = 1;
 
 		    opengl_draw_texture( ctx, user_ctx->m_texture_id, scaling_percent*0.01f );
-		    if( user_ctx->m_numframes != 0 )
-		    {
-		    	-- user_ctx->m_numframes;
-		    	if( user_ctx->m_numframes == 0 )
-		    	{
-		    		LINFO("reached max number of frames");
-		    		return -1;
-		    	}
 
-		    }
 		    if( reload_textures || leak_textures )
 		    {
 		    	if( ! leak_textures )
@@ -211,9 +222,13 @@ int main(int argc, char *argv[])
 {
 	int rc;
     int long_index = 0;
-	int numloops = NO_LIMIT;
+	int numloops = 0;
+	short unlimited_loops = 1;
     //Specifying the expected options
     //The two options l and b expect numbers as argument
+
+	platform_egl_log_init( LL_INFO );
+
     static struct option long_options[] = {
         {"loops",     						  required_argument, 0,  'l' },  /*!< after setting OpenGL, display a number of loops and exit, default is 0 which means run forever */
         {"reload_texture_on_every_frame",     no_argument, 0,  'r' },        /*!< reload-texture on every frame - need this to assed CPU=>GPU bandwidth */
@@ -221,7 +236,7 @@ int main(int argc, char *argv[])
         {"gather_statistics",				  no_argument, 0,  's' },        /*!< print final statistics at the end of the process */
         {"break_textures",					  required_argument, 0, 'b' },  /*!< when displaying, use NxN tiles to display textures */
         {"compress_textures",				  required_argument, 0, 'c' },  /*!< use certain, TODO: tbd compression */
-        {"log_level",						  required_argument, 0, 'v' },   /*!< log_level, off, error, warning, debug, verbose */
+        {"log_level",						  required_argument, 0, 'v' },   /*!< log_level, 'off', 'error', 'warning', 'debug', 'verbose' */
         {0,0,0,0}
     };
 
@@ -231,9 +246,17 @@ int main(int argc, char *argv[])
     	switch (rc) {
     		case 'l' :
     				if( strcmp(optarg, "infinite") == 0 )
-    					numloops = NO_LIMIT;
+    					unlimited_loops = 1;
+    				else if( strcmp(optarg, "none") == 0 )
+    				{
+    					 unlimited_loops = 0;
+    					 numloops = 0;
+    				}
     				else
+    				{
     					numloops = atoi(optarg);
+    					unlimited_loops = 0;
+    				}
     		break;
     		case 'r':
     			reload_textures = 1;
@@ -242,6 +265,35 @@ int main(int argc, char *argv[])
     		case 'k':
     			leak_textures = 1;
     			LWARN("cmdline option: leak textures, this is only for debugging purposes");
+    		break;
+    		case 'v':
+    			   if( strcmp(optarg,"off") == 0 )
+    			   {
+    				   platform_egl_log_init( LL_OFF );
+    			   }
+    			   else if( strcmp(optarg,"verbose") == 0 )
+    			   {
+    				   platform_egl_log_init( LL_VERBOSE );
+    			   }
+    			   else if( strcmp(optarg,"debug") == 0 )
+    			   {
+    				   platform_egl_log_init( LL_DEBUG );
+    			   }
+    			   else if( strcmp(optarg,"info") == 0 )
+    			   {
+    				   platform_egl_log_init( LL_INFO );
+    			   }
+    			   else if( strcmp(optarg,"warning") == 0 )
+    			   {
+    				   platform_egl_log_init( LL_WARN );
+    			   }
+    			   else if( strcmp(optarg,"error") == 0 )
+    			   {
+    				   platform_egl_log_init( LL_ERROR );
+    			   }
+    			   else
+    				   LWARN("could not init log system with level '%s', defaulting to 'info'", optarg);
+    		break;
 
     		default:
     			print_usage();
@@ -249,11 +301,13 @@ int main(int argc, char *argv[])
     	}
     }
 
-	if (numloops < 0 ) {
+	if ( numloops < 0 ) {
+		LERROR("invalid value for numloops, use 'infinite', 'none', 0 or positive integer value");
 		print_usage();
 		exit(EXIT_FAILURE);
 	}
-	printf("loops = %d\n", numloops);
+
+	LINFO("loops = %d\n", numloops);
 
 	PlatformEGLContext* eglctx = platform_egl_context_create();
 	OpenGLContext *oglctx;
@@ -275,7 +329,7 @@ int main(int argc, char *argv[])
 	 * Creating and attaching our own user context.
 	 * This will contain different information to draw, like textures.
 	 */
-	user_init_context( &user_ctx , numloops);
+	user_init_context( &user_ctx , numloops, unlimited_loops);
 	opengl_context_attach_user_ctx( oglctx, &user_ctx);
 
 

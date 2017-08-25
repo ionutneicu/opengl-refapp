@@ -26,6 +26,7 @@
 
 
 #define GL_CHECK_ERROR( __x__ ) __x__ ; if ((opengl_error=glGetError()) != GL_NO_ERROR) { LERROR("-----> %s %s: ERROR %d at line %d", #__x__, __FUNCTION__ , opengl_error,  __LINE__ ); }
+#define GL_CHECK_ERROR_OR_RETURN( __x__ ) __x__ ; if ((opengl_error=glGetError()) != GL_NO_ERROR) { LERROR("-----> %s %s: ERROR %d at line %d", #__x__, __FUNCTION__ , opengl_error,  __LINE__ ); return opengl_error; }
 int opengl_error;
 
 #define MILIS( __x__ )  ( ( __x__.tv_sec*1000 )  + ( __x__.tv_nsec / 1000000 ) )
@@ -53,20 +54,19 @@ static const char *fragment_source =
 
 
 
-GLuint opengl_load_texture_in_gpu( void* texture_data, unsigned int tex_width, unsigned int tex_height )
+int opengl_load_texture_in_gpu( void* texture_data, unsigned int tex_width, unsigned int tex_height, GLuint *p_tex_value )
 {
 	/*TODO: this function does not return any error !!!!*/
-	GLuint textureID = 1;
-	GL_CHECK_ERROR( glGenTextures(1, &textureID) )
-	GL_CHECK_ERROR( glBindTexture(GL_TEXTURE_2D, textureID) )
+	GL_CHECK_ERROR_OR_RETURN( glGenTextures(1, p_tex_value) )
+	GL_CHECK_ERROR_OR_RETURN( glBindTexture(GL_TEXTURE_2D, *p_tex_value) )
 	/*Always load as RGBA */
-	GL_CHECK_ERROR( glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex_width, tex_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture_data) )
-	GL_CHECK_ERROR( glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (GLfloat)GL_NEAREST) );
-	GL_CHECK_ERROR( glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (GLfloat)GL_NEAREST) );
-	GL_CHECK_ERROR( glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE) );
-	GL_CHECK_ERROR( glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE) );
-	LDEBUG("texture_id = %d %d x %d", textureID, tex_width, tex_height);
-	return textureID;
+	GL_CHECK_ERROR_OR_RETURN( glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex_width, tex_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture_data) )
+	GL_CHECK_ERROR_OR_RETURN( glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (GLfloat)GL_NEAREST) );
+	GL_CHECK_ERROR_OR_RETURN( glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (GLfloat)GL_NEAREST) );
+	GL_CHECK_ERROR_OR_RETURN( glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE) );
+	GL_CHECK_ERROR_OR_RETURN( glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE) );
+	LDEBUG("texture_id = %d %d x %d", *p_tex_value, tex_width, tex_height);
+	return GL_NO_ERROR;
 }
 
 void opengl_unload_texture_from_gpu( GLuint texture )

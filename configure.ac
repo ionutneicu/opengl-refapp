@@ -1,22 +1,12 @@
-AC_INIT([Advertplayer], [1.0], [ionut.neicu@inforide.eu], [advertplay])
+AC_INIT([ReferenceApp], [1.0], [ionut.neicu@gmail.com], [refapp])
 #AC_CONFIG_AUX_DIR([build-aux])
 #-- these may be in the file already, or you may need to modify the existing lines.
 AC_PREREQ(2.62)
 AM_INIT_AUTOMAKE([-Wno-portability])
 
-#
-# Gobject Introspection
-#
-#-- add the correct m4 directory location.
+
 AC_CONFIG_MACRO_DIR([build-aux])
 
-#-- any typos here, and you will end up with a message about HAVE_INTROSPECTION not being defined
-GOBJECT_INTROSPECTION_CHECK([1.30.0])
-VAPIGEN_CHECK([1.0])
-
-# library versioning
-#AUXIN_PHONON_PLAYER_LIB_VERSION=0:1:0
-#AC_SUBST([AUXIN_PHONON_PLAYER_LIB_VERSION])
 
 # Checks for programs.
 AC_PROG_CC
@@ -24,19 +14,9 @@ AC_PROG_CXX
 AM_PROG_CC_C_O
 AC_PROG_LIBTOOL
 
-### check for boost signals library
-#AX_BOOST_BASE([1.40])
-#AX_BOOST_SIGNALS
-	
+
 		
-AC_ARG_ENABLE([profiling],
-[  --enable-profiling    Enable profiling using gprof],
-[case "${enableval}" in
-  yes) enable-profiling=true ;;
-  no)  enable-profiling=false ;;
-  *) AC_MSG_ERROR([bad value ${enableval} for --enable-profiling]) ;;
-esac],[enable-profiling=false])
-AM_CONDITIONAL([HAVE_PROFILING], [test x$enable-profiling = xtrue])
+
 
 AC_ARG_ENABLE([x11],
 [  --enable-x11    Enable X11 support],
@@ -60,23 +40,22 @@ AM_COND_IF([HAVE_X11], [
 PKG_CHECK_MODULES([XLIB], [x11])
 AC_SUBST(XLIB_CFLAGS)
 AC_SUBST(XLIB_LIBS)
-])
 
-AM_COND_IF([HAVE_X11], [
 PKG_CHECK_MODULES([GLES], [glesv2] )
 AC_SUBST(GLES_CFLAGS)
 AC_SUBST(GLES_LIBS)
-])
-
-AM_COND_IF([HAVE_DISPMANX], [
-AC_SUBST(DISPMANX_LIBS, "-lvcos -lvchiq_arm -lbcm_host -lpcre")
-AC_SUBST(DISPMANX_CFLAGS, -I/opt/vc/include)
-])
-
 
 PKG_CHECK_MODULES([EGL], [egl] )
 AC_SUBST(EGL_CFGLAGS)
 AC_SUBST(EGL_LIBS)
+])
+
+AM_COND_IF([HAVE_DISPMANX], [
+AC_SUBST(DISPMANX_CFLAGS, "-DPLATFORM_RPI -DSTANDALONE -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -DTARGET_POSIX -D_LINUX -fPIC -DPIC -D_REENTRANT -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -U_FORTIFY_SOURCE -Wall -g -DHAVE_LIBOPENMAX=2 -DOMX -DOMX_SKIP64BIT -ftree-vectorize -pipe -DUSE_EXTERNAL_OMX -DHAVE_LIBBCM_HOST -DUSE_EXTERNAL_LIBBCM_HOST -DUSE_VCHIQ_ARM -Wno-psabi" )
+AC_SUBST(DISPMANX_LDFLAGS, "-L/opt/vc/lib/ -lbrcmGLESv2 -lbrcmEGL -lbcm_host -lvcos -lvchiq_arm -lpthread -lrt -lm" )
+AC_SUBST(DISPMANX_INCLUDES, "-I/opt/vc/include/ -I/opt/vc/include/interface/vcos/pthreads -I/opt/vc/include/interface/vmcs_host/linux")
+])
+
 
 PKG_CHECK_MODULES([CAIRO], [cairo] )
 AC_SUBST(CAIRO_CFGLAGS)

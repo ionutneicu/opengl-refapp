@@ -13,6 +13,12 @@
 
 
 
+static log_level_t current_level;
+
+void platform_egl_log_init( log_level_t level )
+{
+	current_level = level;
+}
 
 inline void platform_egl_varlog( 	const log_level_t level,
                          	 	 	const char *file,
@@ -22,6 +28,8 @@ inline void platform_egl_varlog( 	const log_level_t level,
 {
     char dest[1024 * 16];
     va_list argptr;
+    if( level < current_level )
+    	return;
     va_start(argptr, format);
     vsnprintf( dest, sizeof( dest ) , format, argptr );
     va_end(argptr);
