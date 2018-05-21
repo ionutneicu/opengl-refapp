@@ -9,7 +9,6 @@
 #define PLATORM_EGL_LOG_H_
 
 
-#include <stdio.h>
 enum log_level
 {
 	LL_VERBOSE = 0, // use this in loops, wi;l produce a lot of messages

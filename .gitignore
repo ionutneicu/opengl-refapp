@@ -20,5 +20,16 @@ ltmain.sh
 main.o
 missing
 *.o
+*.a
+*.so.*
+*.so
+*.la
+*.lo
 refopenglapp
 texture.bmp
+.settings
+.eclipse_ws
+platform-lib/.libs/*
+plugins/.libs/*
+plugins/.libs/*
+

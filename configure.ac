@@ -61,8 +61,13 @@ PKG_CHECK_MODULES([CAIRO], [cairo] )
 AC_SUBST(CAIRO_CFGLAGS)
 AC_SUBST(CAIRO_LIBS)
 
+
 AC_CONFIG_FILES([
-                Makefile
+				Makefile
+                platform-lib/Makefile                
+				plugins/Makefile
+				app/Makefile				
+				tests/plugininitializertests/Makefile				
         ])
         
 AC_OUTPUT
