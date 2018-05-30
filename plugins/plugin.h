@@ -16,18 +16,18 @@ typedef int plugin_destroy_context_func( void* plugin_ctx );
 
 typedef struct tagOpenGLPluginInfo
 {
-	char*							plugin_name;
-	unsigned  short					plugin_ver_minor;
-	unsigned  short					plugin_ver_major;
-	plugin_init_context_func*		init_func;
-	plugin_frame_display_func* 	  	frame_display_func;
+	char*				plugin_name;
+	unsigned  short			plugin_ver_minor;
+	unsigned  short			plugin_ver_major;
+	plugin_init_context_func*	init_func;
+	plugin_frame_display_func* 	frame_display_func;
 	plugin_destroy_context_func* 	destroy_func;
 } OpenGLPluginInfo;
 
 typedef struct tagOpenGLPlugin
 {
-	OpenGLPluginInfo				plugin_info;
-	void*							plugin_ctx;
+	OpenGLPluginInfo		plugin_info;
+	void*				plugin_ctx;
 } OpenGLPlugin;
 
 
