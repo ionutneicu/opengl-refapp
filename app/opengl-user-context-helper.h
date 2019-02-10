@@ -14,7 +14,6 @@
 
 
 #include "opengl-context.h"
-
 #include "plugin.h"
 
 
@@ -67,6 +66,6 @@ int opengl_user_ctx_remove_plugin( OpenGLUserContext *opengl_user_ctx, unsigned 
 
 
 
-int opengl_plugin_init( OpenGLPlugin* plugin );
+int opengl_plugin_init( OpenGLContext* opengl_context, OpenGLPlugin* plugin );
 
 #endif /* OPENGL_USER_CONTEXT_HELPER_H_ */

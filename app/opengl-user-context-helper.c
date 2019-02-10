@@ -7,10 +7,10 @@
 #include "opengl-user-context-helper.h"
 #include <stdlib.h>
 
-int opengl_plugin_init( OpenGLPlugin* plugin )
+int opengl_plugin_init( OpenGLContext* opengl_context, OpenGLPlugin* plugin )
 {
-	if( plugin->init_func )
-		return plugin->init_func( plugin );
+	if( plugin->plugin_info->init_func )
+		return plugin->plugin_info->init_func( opengl_context, plugin->plugin_ctx );
 	return 0;
 }
 

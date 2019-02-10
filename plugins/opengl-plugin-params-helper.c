@@ -33,7 +33,6 @@ void opengl_plugin_initializer_field_list_node_destroy(PluginInitializerFieldLis
 		}
 		free( node );
 	}
-
 }
 
 PluginInitializerFieldListNode * opengl_plugin_initializer_field_list_find_by_path( PluginInitializerFieldListNode *list, const char* path)
@@ -123,10 +122,12 @@ int opengl_plugin_initializer_field_list_destroy(PluginInitializerFieldListNode 
 {
 	int items = 0;
 	PluginInitializerFieldListNode *current = list;
+	PluginInitializerFieldListNode *next = NULL;
 	while( current )
 	{
+		next = current->_next;
 		opengl_plugin_initializer_field_list_node_destroy( current );
-		current = current->_next;
+		current = next;
 		++ items;
 	}
 	return items;

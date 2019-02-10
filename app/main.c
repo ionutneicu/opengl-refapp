@@ -49,82 +49,9 @@
  * @return 0 for success, or non-zero error code
  */
 
-#if 0
-int load_bmp_custom(const char * imagepath, OpenGLUserContext * user_context )
-{
-	unsigned char header[54];
-	unsigned int dataPos;
-	unsigned int imageSize;
-	int i, rc;
-
-	FILE * file = fopen(imagepath,"rb");
-	if (!file)
-	{
-		printf("Image could not be opened 1\n\r");
-		return -1;
-	}
-
-	if( fread(header, 1, 54, file ) != 54 )
-	{
-		printf("Not a correct BMP file, too short\n\r");
-		return -2;
-	}
-
-	if( ( header[0] != 'B' ) || ( header[1] != 'M' ) )
-	{
-		printf("Not a correct BMP file\n\r");
-		return -3;
-	}
-
-	dataPos   =  *(int*)&(header[0x0A]);
-
-	user_context->m_texture_width     =  *(int*)&(header[0x12]);
-	user_context->m_texture_height    =  *(int*)&(header[0x16]);
-
-	imageSize =  *(int*)&(header[0x22]);
-
-	user_context->m_texture_data = (char*)malloc(  user_context->m_texture_width*user_context->m_texture_height*4 );
-	memset( user_context->m_texture_data, 0xff,  user_context->m_texture_width*user_context->m_texture_height*3 );
-
-	printf("found bitmap in file, width=%d, height=%d, image_size=%d\n\r", user_context->m_texture_width, user_context->m_texture_height, imageSize );
-	if ( imageSize == 0 ) imageSize = user_context->m_texture_width*user_context->m_texture_height*3;
-	if( imageSize != user_context->m_texture_width*user_context->m_texture_height*3 )
-			return -5;
-
-	if ( dataPos == 0 )
-		dataPos = 54;
-
-	rc = fseek( file, dataPos , SEEK_SET );
-	if( rc  )
-	{
-		LERROR("could not seek file, fatal error");
-		exit -1;
-	}
-
-	char tmpdata[ user_context->m_texture_width*user_context->m_texture_height*4 ];
 
 
-    rc = fread( tmpdata, imageSize, 1, file );
-    if( rc != 1 )
-    {
-    	LERROR("could not read the bitmap file, fatal error");
-    	exit -1;
-    }
-
-	for( i = 0; i < user_context->m_texture_width*user_context->m_texture_height; ++ i )
-	{
-		user_context->m_texture_data[ 4*i ]   = tmpdata[ 3*i + 2 ];  /*R*/
-		user_context->m_texture_data[ 4*i+1 ] = tmpdata[ 3*i + 1 ];  /*G*/
-		user_context->m_texture_data[ 4*i+2 ] = tmpdata[ 3*i  ];     /*B*/
-		user_context->m_texture_data[ 4*i+3 ] = 0xFF;                /*A*/
-	}
-
-	fclose(file);
-	return 0;
-}
-#endif
-
-int opengl_user_context_init( OpenGLUserContext* user_ctx )
+int opengl_user_context_init( OpenGLContext * opengl_ctx, OpenGLUserContext* user_ctx )
 {
 	user_ctx->plugins_head = NULL;
 	user_ctx->last_plugin_id = 0;
@@ -139,32 +66,32 @@ int opengl_user_context_init( OpenGLUserContext* user_ctx )
 	OpenGLPlugin *background_plugin =  opengl_plugin_registry_create_plugin_by_name("static.picture", static_picture_params );
 	assert( background_plugin != NULL );
 	opengl_user_ctx_add_plugin( user_ctx, background_plugin );
-
+/*
 	static_scrolltest_params =  opengl_plugin_initializer_field_list_add_string(static_scrolltest_params, "text", "This is sample text. For mode, please add here some text" );
 	OpenGLPlugin *text_scroll_plugin =  opengl_plugin_registry_create_plugin_by_name("textscrool.horizontal", static_scrolltest_params);
 	assert( text_scroll_plugin != NULL );
 
 	opengl_user_ctx_add_plugin( user_ctx, text_scroll_plugin );
-
+*/
 
 	// at the end:
-	opengl_plugin_init(background_plugin);
-	opengl_plugin_init(text_scroll_plugin);
+	opengl_plugin_init(opengl_ctx, background_plugin);
+	//opengl_plugin_init(text_scroll_plugin);
 	opengl_plugin_initializer_field_list_destroy( static_picture_params );
-	opengl_plugin_initializer_field_list_destroy( static_scrolltest_params );
+	//opengl_plugin_initializer_field_list_destroy( static_scrolltest_params );
 }
 
 
-int user_loop_function( OpenGLContext * ctx )
+int user_loop_function( OpenGLContext * opengl_ctx )
 {
 	int rc;
-	OpenGLUserContext* user_ctx = ( OpenGLUserContext *) opengl_context_get_user_ctx( ctx );
+	OpenGLUserContext* user_ctx = ( OpenGLUserContext *) opengl_context_get_user_ctx( opengl_ctx );
 	OpenGLPluginListNode* node = user_ctx->plugins_head;
 	for( ; node != NULL; node = node->next )
 	{
 			if( node && node->plugin )
 			{
-				rc = node->plugin->frame_display_func( node->plugin->plugin_ctx );
+				rc = node->plugin->plugin_info->frame_display_func( opengl_ctx, node->plugin->plugin_ctx );
 				if( rc )
 				{
 					/* TODO: tear-down this plugin/node */
@@ -202,7 +129,7 @@ int main(int argc, char *argv[])
 	 * Creating and attaching our own user context.
 	 * This will contain different information to draw, like textures.
 	 */
-	opengl_user_context_init( & opengl_user_ctx );
+	opengl_user_context_init( opengl_context, &opengl_user_ctx );
 	opengl_context_attach_user_ctx( opengl_context, &opengl_user_ctx);
 
 

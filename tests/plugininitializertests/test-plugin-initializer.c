@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "CUnit/Basic.h"
-#include "opengl-plugin-params-helper.h"
+#include "../plugins/opengl-plugin-params-helper.h"
 
 const char INTEGER_FIELD_PATH[]  = "my.first.integer";
 int        INTEGER_VAL			 = 0xcaffebad;
@@ -85,7 +85,7 @@ void test_add_int_overwrite_string_plugin_list(void)
 
 void test_cleanup_plugin_list(void)
 {
-	return( 3 == opengl_plugin_initializer_field_list_destroy(list) );
+	CU_ASSERT( 3 == opengl_plugin_initializer_field_list_destroy(list) );
 }
 
 

@@ -156,7 +156,6 @@ int opengl_draw(OpenGLContext* opengl_ctx, user_loop_function_pf user_loop)
 
 	++num_frames;
 
-
 	if( milis  > 1000 )
 	{
 

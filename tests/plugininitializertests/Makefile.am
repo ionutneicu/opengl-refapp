@@ -1,7 +1,7 @@
 bin_PROGRAMS = testplugininitializer
 
 testplugininitializer_SOURCES = test-plugin-initializer.cpp \
-					   ../../app/opengl-plugin-params-helper.c
+					   ../../plugins/opengl-plugin-params-helper.c
 					   	      
 					   
 #testplugininitializer_LDADD = ../../platform-lib/libplatformopengl.la					   

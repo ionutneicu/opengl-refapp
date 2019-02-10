@@ -2,7 +2,8 @@ AC_INIT([ReferenceApp], [1.0], [ionut.neicu@gmail.com], [refapp])
 #AC_CONFIG_AUX_DIR([build-aux])
 #-- these may be in the file already, or you may need to modify the existing lines.
 AC_PREREQ(2.62)
-AM_INIT_AUTOMAKE([-Wno-portability])
+AM_INIT_AUTOMAKE([subdir-objects])
+
 
 
 AC_CONFIG_MACRO_DIR([build-aux])

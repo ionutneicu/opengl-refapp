@@ -10,7 +10,7 @@
 #include "stdlib.h"
 
 
-
+extern OpenGLPlugin * opengl_plugin_static_picture_try_init( PluginInitializerFieldListNode *field_list );
 
 #if 0
 
@@ -74,19 +74,16 @@ int opengl_plugin_registry_init( const char *plugin_path)
 
 /**
  * opengl_plugin_registry_create_plugin_by_name creates a plugin of known type using json to initialize its members
->>>>>>> 5a4baa299ae1bff58c6ec53502973614b9b5e123
  * @param plugin_name - known plugin type
  * @param json_plugin_initalizer - json-formatted string containing plugin's initializer parameters
  * @return plugin in case of success, or NULL if error
  */
 OpenGLPlugin * opengl_plugin_registry_create_plugin_by_name( const char *plugin_name, PluginInitializerFieldListNode *field_list)
 {
-
-
-		 if( strcmp( plugin_name, "static.picture"))
+		 if( strcmp( plugin_name, "static.picture")==0)
 			 return opengl_plugin_static_picture_try_init( field_list );
-		 else
-			 if( strcmp( plugin_name, "textscrool.horizontal"))
-				 return opengl_plugin_textscrool_try_init( field_list);
+		 //else
+		 //	 if( strcmp( plugin_name, "textscrool.horizontal"))
+		 //		 return opengl_plugin_textscrool_try_init( field_list);
 		return 0;
 }
