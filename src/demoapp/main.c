@@ -49,6 +49,10 @@ typedef struct tagOpenGLUserContext
 	long		m_numframes;
 } OpenGLUserContext;
 
+#ifndef APPLICATION_NAME
+#define APPLICATION_NAME "opengl_refapp"
+#endif
+
 #define USER_CONTEXT( __ctx__ ) ( (OpenGLUserContext*)__ctx__->user_ctx );
 
 #define SUCCESS 	0
@@ -215,7 +219,13 @@ int user_loop_function( OpenGLContext * ctx )
 
 void print_usage()
 {
-
+	printf("%s -l <loops> -r -k -s -b<texture_size> -c -l<log_level>\n\n", APPLICATION_NAME);
+	printf("\t\t -l <loops> stop after certain frames/loops, can be also 'infinite' for infinite loops, default=infinite\n");
+	printf("\t\t -r - force reloading texture after every frame - GPU stress / memory leak detector\n");
+	printf("\t\t -s - gather GPU statistics, if available\n");
+	printf("\t\t -b <texture_size> - break large textures into maximum texture_size x texture_size textures when loading into CPU\n");
+	printf("\t\t -c compress textures - experimental, platform-specific\n");
+	printf("\t\t -l <log level>, can be 'off', 'verbose', 'debug', 'info', 'warning', 'error' \n");
 }
 
 int main(int argc, char *argv[])
@@ -260,7 +270,7 @@ int main(int argc, char *argv[])
     		break;
     		case 'r':
     			reload_textures = 1;
-    			LWARN("cmdline option: reload texture on every, this will affect performance");
+    			LWARN("cmdline option: reload texture on every frame, this will affect performance");
     		break;
     		case 'k':
     			leak_textures = 1;

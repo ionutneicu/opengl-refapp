@@ -5,7 +5,7 @@
  *      Author: ionut
  */
 
-#include "../platform-egl-context-priv.h"
+#include "platform-egl-context-priv.h"
 #include "platform-egl-log.h"
 
 /*TODO circular dependency between OpenGL and EGL*/

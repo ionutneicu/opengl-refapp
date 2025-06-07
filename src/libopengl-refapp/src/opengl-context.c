@@ -139,7 +139,7 @@ int opengl_draw(OpenGLContext* opengl_ctx, user_loop_function_pf user_loop)
 	if( user_loop )
 	{
 		rc = user_loop( opengl_ctx );
-		if( rc )
+		if( rc != SUCCCESS )
 			return rc;
 	}
 	else
